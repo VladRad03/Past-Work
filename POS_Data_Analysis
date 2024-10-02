@@ -132,9 +132,9 @@ def plotdf2(df: pd.DataFrame):
 
 def getGitData(path, myToken)-> pd.DataFrame:
     # Define the repository details
-    owner = 'tkjavier0'
-    repo = 'PubClub'
-    #path = 'Friday_Data'
+    owner = ##'#####'
+    repo = #'####'
+    #path = #'####'
     branch = 'main'
     #token = 'ghp_O5---d5Ml---j---yjea---zWZq---1kVI2'  # Optional if accessing a private repo
 
@@ -158,3 +158,172 @@ def getGitData(path, myToken)-> pd.DataFrame:
     # Combine dataframes if needed
     combined_data = pd.concat(csv_dataframes, ignore_index=True)
     return combined_data
+#########################################################################
+percents = [[0 for _ in range(20)] for _ in range(8)]
+tots = [0]*8
+#0-20, 20-40, 40-60, 60-80, 80-100, 100-200, 200-300
+boxes = [10 + i*10 for i in range(20)]
+#boxes.append(200)
+
+print(boxes)
+#boxes = [20, 40, 60, 80, 100, 200, 300]
+dfs = []
+i = 5
+for df in wdfs:
+    #print(df['Time Open'].head())
+    df1 = df[df['Table Number'].notnull()]
+    dfs.append(df1)
+    i= (i+1)%8
+    tots[i] = len(df1)
+    for j in range(20):
+        percents[i][j] = len(df1[df1['Time Open'] < boxes[j]]) / tots[i]
+        df1 = df1[df1['Time Open'] >= boxes[j]]
+    print(percents[i][19])
+    
+dfg = pd.concat(dfs)
+tots[7] = len(dfg)
+for j in range(20):
+        percents[7][j] = len(dfg[dfg['Time Open'] < boxes[j]]) / tots[7]
+        dfg = dfg[dfg['Time Open'] >= boxes[j]]
+#print(percents[7][:])
+#print(percents)
+#print(tots)
+# Plot histograms side by side
+num_datasets = len(tots)
+
+fig, axes = plt.subplots(1, num_datasets-4, figsize=(5 * (num_datasets-4), 7), sharey=True)
+
+for i, (row, ax) in enumerate(zip(percents, axes)):
+    print(daysOfWeek[(i+4) %8])
+    ax.bar([str(box) for box in boxes], row, color='blue', alpha=0.7)
+    ax.set_xlabel('Time Open (bins)')
+    ax.set_ylabel('Percentage' if i == 0 else '')
+    ax.set_title(f'Histogram for ' + daysOfWeek[(i+4) %8])
+    ax.tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+plt.show()
+################################
+wdfs = [monData, tuesData, wedData, thursData, friData, satData, sunData]
+daysOfWeek = ["Monday Data", "Tuesday Data", "Wednesday Data", "Thursday Data", 
+                  "Friday Data", "Saturday Data", "Sunday Data", "General Data"]
+numDataSetsPerDayOfWeek = [11, 11, 10, 12, 12, 10, 10]
+i = -1
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+# Plot between -10 and 10 with .001 steps.
+x_axis = np.arange(8, 26, 0.01)
+#18.105675146771038, 2.2617771542828526, 511, 414, 11
+plt.plot(x_axis, (925/11) * norm.pdf(x_axis, 18.1, 2.26))
+#plt.plot(x_axis, 297 * norm.pdf(x_axis, 17.9,3.44))
+#plt.plot(x_axis, 297 * norm.pdf(x_axis, 17.9,3.44) + 640 * norm.pdf(x_axis, 15.5,3.2))
+#plt.plot(x_axis, (297/11) * norm.pdf(x_axis, 17.9,3.44) + (640/11) * norm.pdf(x_axis, 15.5,3.2))
+plt.xlabel('Time of Day')  # X-axis label
+plt.ylabel('# Tickets Opened') # Y-axis label
+plt.title('Monday Average Hourly Customer Entrance Rate')  # Plot title
+#plt.show()
+barMeans = [0]*7
+barStds = [0]*7
+tableMeans = [0]*7
+tableStds = [0]*7
+barTickets = [0]*7
+tableTickets = [0]*7
+genStds = [0]*7
+#print("I am going to print all of the data in one block, here is the format")
+#print("first all of the arrays will be from 10am to 1am")
+times = timesArray()
+#print(times[10:26])
+#print("Then it will chunked by day of the week, Monday, Tuesday, ..., Sunday")
+#print("Each chunk will have general entry rates, then tabler rates, then bar-bloke rates")
+#print()
+for df in wdfs:
+    i +=1
+    print(daysOfWeek[i])
+    print(df.head())
+    #df1 = df[df['Table Number'].notnull()]
+    #df2 = df[df['Table Number'].isnull()]
+    #tableMeans[i] = df1['Open'].mean()
+    #tableStds[i] = df1['Open'].std()
+    #barMeans[i] = df2['Open'].mean()
+    #barStds[i] = df2['Open'].std()
+    #tableTickets[i] = df1['Open'].count()
+    #barTickets[i] = df2['Open'].count()
+    #genStds[i] = df['Open'].std()
+    #print(df1['Open'].describe())
+    #print(df2['Open'].describe())
+    #print(df['Open'].describe())
+    #getRates(df, i, daysOfWeek, numDataSetsPerDayOfWeek)
+
+
+#print(tableMeans)
+#print(barMeans)
+
+#print(tableStds)
+#print(barStds)
+
+#print(tableTickets)
+#print(barTickets)
+
+#print(genStds)
+
+########################################
+def timesArray():
+    temp = ['AM']*12
+    temp2 = ['PM']*12
+    for j in range(12):
+        temp[j] = str(j) + temp[j]
+        temp2[j] = str(j) + temp2[j]
+    out =  temp + temp2 + temp[:6]
+    out[0] = '12AM'
+    out[12] = '12PM'
+    out[24] = '12AM'
+    #print(len(out))
+    #print(out)
+    return out
+def getRates(df, i, daysOfWeek, numDataSetsPerDayOfWeek):
+    numTablers = [0]*30
+    numBars = [0]*30
+    numGen = [0] * 30
+    times = timesArray()
+    lp = 0
+    rp = 0
+    lp2 = 0
+    rp2 = 0
+    lp3 = 0 
+    rp3 = 0
+    
+    for j in range(30):
+        df1 = df[df['Table Number'].notnull()]
+        #print(df1.info())
+        df2 = df[df['Table Number'].isnull()]
+        #print(df2.info())
+        numTablers[j] = (len(df1[df1['Open'] == j]) ) / numDataSetsPerDayOfWeek[i]
+        numBars[j] = (len(df2[df2['Open'] == j]) ) / numDataSetsPerDayOfWeek[i]
+        numGen[j] = (len(df[df['Open'] == j]) ) / numDataSetsPerDayOfWeek[i]
+        if (numTablers[j] != 0 and lp == 0):
+            lp = j
+        if (numTablers[j] == 0 and lp != 0 and rp == 0):
+            rp = j-1
+        if (numBars[j] != 0 and lp2 == 0):
+            lp2 = j
+        if (numBars[j] == 0 and lp2 != 0 and rp2 == 0):
+            rp2 = j-1
+        if (numGen[j] != 0 and lp3 == 0):
+            lp3 = j
+        if (numGen[j] == 0 and lp3 != 0 and rp3 == 0):
+            rp3 = j-1
+    print(daysOfWeek[i] + ": ")
+    #print('Average Customers entered during this hour, looking over ' + str(numDataSetsPerDayOfWeek[i]) + ' days')
+    print(numGen[10:26])
+    #print(times[lp3:rp3])
+    #print('Average Table-Go-ers entered during this hour, looking over ' + str(numDataSetsPerDayOfWeek[i]) + ' days')
+    print(numTablers[10:26])
+    #print(times[lp:rp])
+    #print('Average Bar-Go-ers entered during this hour, looking over ' + str(numDataSetsPerDayOfWeek[i]) + ' days')
+    print(numBars[10:26])
+    #print(times[lp2:rp2])
+    filtered_df = df[df['Table Number'].notnull()] # remove credit card tab tickets (mostly removing bar seating)
+    print()

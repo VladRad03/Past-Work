@@ -6,6 +6,13 @@ from scipy.stats import linregress
 #puts the points in (additionalComponenets + 2) dimensional space
 #Generates points iteratively by repeatedly calculating the midpoint 
 #this midpoint is between previous midpoint and one of the 3 vertices
+# Credit to AI tools such as ChatGPT
+# Credit to following papers and their authors
+# https://www.ml.cmu.edu/research/dap-papers/skkumar_kdd_project.pdf
+# https://doi.org/10.1364/JOSAA.7.001055
+# https://www.sciencedirect.com/science/article/pii/0167278983902981 
+###
+
 
 ###### Fictional Data Constuctors 
 
@@ -55,7 +62,7 @@ def canGen(c, embedded_dimension):
     
     return can
 
-
+###### Computational Methods ####
 #returns a new point that is the midpoint between p1 and p2, in NumPy matrix form
 def midpoint(p1, p2):
     p1 = np.array(p1)

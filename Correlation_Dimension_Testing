@@ -1,1 +1,203 @@
+import numpy as np
+import random
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
+#Generates (iterations + 4) points on the sierpinski triangle
+#puts the points in (additionalComponenets + 2) dimensional space
+#Generates points iteratively by repeatedly calculating the midpoint 
+#this midpoint is between previous midpoint and one of the 3 vertices
 
+###### Fictional Data Constuctors 
+
+#The returned point set will be a list of Numpy Arrays
+def generateSerpPointSet(iterations, additionalComponents):
+    points = []
+    points.append(np.concatenate([[0, 0], np.random.randint(-2, 2, additionalComponents)]))
+    points.append(np.concatenate([[2, 0], np.random.randint(-2, 2, additionalComponents)]))
+    points.append(np.concatenate([[1, 2], np.random.randint(-2, 2, additionalComponents)])) 
+    current_mid_point = np.array(midpoint(points[0], points[1]))
+    points.append(current_mid_point)
+
+    for i in range(1, iterations):
+        current_mid_point = np.array(midpoint(current_mid_point, points[random.randint(0, 2)]))
+        points.append(current_mid_point)
+    return points
+
+
+#not optimal however makes the 0.5 dimensional cantor set
+def canGen(c, embedded_dimension):
+    if (embedded_dimension < 1):
+        return null
+    can = []
+    secondPoint = np.zeros(embedded_dimension)
+    secondPoint[0] = 1
+
+    can.append(np.zeros(embedded_dimension))
+    can.append(secondPoint)
+
+    newIntervalLength = 1/4
+    for i in range(c):
+        n = 0
+        newCan = []
+        for j in range(len(can) // 2):
+            leftPoint = can[n].copy()
+            rightPoint = can[n + 1].copy()
+            leftPoint[0] += newIntervalLength
+            rightPoint[0] -= newIntervalLength
+            
+            newCan.append(can[n])
+            newCan.append(leftPoint)
+            newCan.append(rightPoint)
+            newCan.append(can[n + 1])
+            n += 2
+        can = newCan
+        newIntervalLength *= 1/4
+    
+    return can
+
+
+#returns a new point that is the midpoint between p1 and p2, in NumPy matrix form
+def midpoint(p1, p2):
+    p1 = np.array(p1)
+    p2 = np.array(p2)
+
+    if p1.shape != p2.shape:
+        raise ValueError("Points must have the same number of dimensions")
+    
+    return (p1 + p2) / 2
+
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+def PCAData(points, n_components):
+    # Convert the list to a Pandas DataFrame
+    data = pd.DataFrame(points, columns=[f'Feature{i+1}' for i in range(len(points[0]))])
+
+    scaler = StandardScaler()
+    scaled_data = scaler.fit_transform(data)
+
+    # Create a PCA object
+    pca = PCA(n_components=n_components)
+    # Fit the PCA model and transform the data
+    principal_components = pca.fit_transform(scaled_data)
+    points2 = []
+    for i in range(len(principal_components)):
+        points2.append(np.array(principal_components[i]))
+    
+    return points2
+
+def plot_2d_data(data):
+    if len(data[0]) > 2:
+        xs = [data[i][0] for i in range(len(data))]
+        ys = [data[i][1] for i in range(len(data))]
+        print("Only Plotting First 2 elements of data")
+        plt.scatter(xs, ys, c='g', marker='.', label='Data Points')
+    if len(data[0]) == 1:
+        xs = [data[i][0] for i in range(len(data))]
+        print("Plotting points along x=y axis, data only has 1 element")
+        plt.scatter(xs, xs, c='g', marker='.', label='Data Points')
+    else:
+        xs = [data[i][0] for i in range(len(data))]
+        ys = [data[i][1] for i in range(len(data))]
+        plt.scatter(xs, ys, c='g', marker='.', label='Data Points')
+    plt.xlabel('Feature 1')
+    plt.ylabel('Feature 2')
+    plt.title('2D Plot of Data Points')
+    plt.legend()
+    plt.show()
+
+# Example usage:
+# data = ...  # Your 2D numpy array
+# plot_2d_data(data)
+
+#function already exists lol
+def random_subset(point_set, n):
+    return random.sample(point_set, n)
+
+def generate_radius_test_set(point_set, sample_size, r_count):
+    #print(point_set)
+    
+    #sampleSet = random.sample(point_set, sample_size)
+    sampleSetDistances = distance_set(random.sample(point_set, sample_size))
+    
+    # Calculate standard deviation
+    """"
+    std_deviation = np.std(sampleSetDistances)
+    for d in sampleSetDistances:
+        d = d + 0.1*std_deviation
+    """
+    if (r_count == -1):
+        return sampleSetDistances
+    return random.sample(sampleSetDistances, r_count)
+    
+    #return np.linspace(mean_value - 2 * std_deviation, mean_value + 2 * std_deviation, r_count)
+
+def distance_set(point_set):
+    sampleSetDistances = []
+    for i in range(len(point_set)):
+        for j in range(i):
+            d = np.linalg.norm(point_set[i] - point_set[j])
+            if d>0:
+                sampleSetDistances.append(d)
+    return sampleSetDistances
+def distance_set_centered(point_set, center_index):
+    sampleSetDistances = []
+    for p in point_set:
+        d = np.linalg.norm(p - point_set[center_index])
+        if d>0:
+            sampleSetDistances.append(d)
+    return sorted(sampleSetDistances)
+def CMU_Fractal_Dim(point_set, sample_size, plot_boolean):
+    
+    rs = generate_radius_test_set(point_set, sample_size, -1)
+    sample_distance_set = distance_set(random.sample(point_set, sample_size))
+    neighbor_count_per_r = []
+    c=1
+    for r in rs:
+        for d in sample_distance_set:
+            if d < r:
+                c += 1
+        #print(c)
+        neighbor_count_per_r.append(c)
+        c = 1
+    
+    rs_log = np.log(rs)
+    #print(len(rs_log))
+    cs_log = np.log(neighbor_count_per_r)
+    #print(len(cs_log))
+    if (plot_boolean):
+        plt.scatter(rs_log, cs_log, c='g', marker='.', label='Data Points')
+        plt.xlabel('log(Radius)')
+        plt.ylabel('log(Neighbor Count)')
+        plt.title('Fractal Dimension Calculation')
+        plt.legend()
+        plt.show()
+
+    result = linregress(rs_log, cs_log)
+    print(result.slope)
+    
+    return result.slope
+    
+#finds the roc of density over radius at a single point
+def localCMU(point_set, localIndex, plot_boolean):
+    sortedDistances = distance_set_centered(point_set, localIndex)
+    rs_log = np.log(sortedDistances)
+    cs_log = np.log(np.linspace(2, len(sortedDistances)+2, len(sortedDistances)))
+    if (plot_boolean):
+        plt.scatter(rs_log, cs_log, c='g', marker='.', label='Data Points')
+        plt.xlabel('log(Radius)')
+        plt.ylabel('log(Neighbor Count)')
+        plt.title('Fractal Dimension Calculation')
+        plt.legend()
+        plt.show()
+    result = linregress(rs_log, cs_log)
+    #print(result.slope)
+    return result.slope
+
+def localAverageCMU(point_set):
+    slopes = []
+    randomNums = random.sample(range(0, len(point_set)), 20)
+    for i in range(20):
+        slopes.append(localCMU(point_set, randomNums[i], 0))
+    print(np.max(slopes))
+    

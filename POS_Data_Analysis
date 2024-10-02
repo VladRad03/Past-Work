@@ -1,1 +1,160 @@
+##Only need to really use the createMultiCSVdf(file_paths[], boolean) function
+##after it's been converted into pandas dataframe it is very easy to use, simply look up how dataframes work
+##the boolean prints out some information about the dataset, put zero if you don't really want it
+#also print full is fairly useful for printing the entirety of the dataset, but
 
+#convert_df() fixes already created df of murphy's data into mostly numerical
+
+
+import re
+import pandas as pd
+#import glob
+import matplotlib.pyplot as plt
+    
+import requests
+from io import StringIO
+import base64
+
+def get_ticket_timedelta(df: pd.DataFrame, to_replace: list[str], col: str) -> list[float]:
+    for i in to_replace:
+        df[col] = df[col].str.replace(i, "")
+    times = list(df[col])
+    timedeltas = []
+    for time in times:
+        x = str(time).split()
+        if len(x) > 1:
+            timedeltas.append(60 * float(x[0]) + float(x[1]))
+        else:
+            timedeltas.append(float(time))
+    df[col] = timedeltas
+    return timedeltas
+#converts murphy's pub dataframe containing time of ticket opening, and time of ticket closing
+#into time since 12am that day in minutes (600 = 12pm)
+def convertTimeOpenCloseToNumerical(df: pd.DataFrame):
+    col1 = "Open"
+    col2 = "Close"
+    times1 = list(df[col1])
+    times2 = list(df[col2])
+    out1 = []
+    out2 = []
+    convertTime(times1, out1)
+    convertTime(times2, out2)
+    df["Open"] = out1
+    df["Close"] = out2
+#converts strings in times to numerical values put into out
+#-1 represents a null string in list
+def convertTime(times, out):
+    #to_replace = ["am", "pm"]
+    for time in times:
+        x = str(time).split()
+        ampm = 0
+        
+        
+        if len(x) == 2:
+            if "pm" == x[1]: 
+                ampm = 12
+            x = x[0]
+            x = x.replace(":", " ")
+            x = x.split()
+            
+            
+            hour = int(x[0])
+            if (hour==12): 
+                if (ampm == 12): #dont want to add 12 to 12pm
+                   
+                    ampm = 0
+                elif (ampm == 0): #also want 12am to be later than 11pm
+            
+                    ampm = 12
+            if (hour == 1 or hour == 2 or hour == 3 or hour == 4 or hour == 5 or hour ==6): #want 1,2,3am to be later than 11pm
+                if (ampm == 0):
+                    ampm = ampm + 24
+            out.append((float(x[0]) + ampm))
+            
+        else:
+            out.append(-1)
+        
+def print_full(x):
+    pd.set_option('display.max_rows', len(x))
+    print(x)
+    pd.reset_option('display.max_rows')
+
+#Converts each file path in the array of file path strings into a combined pandas dataframe
+def createMultiCSVdf(file_paths, infoBool)-> pd.DataFrame:
+    dataframes = []
+    for csv_file in file_paths:
+        df = pd.read_csv(csv_file)
+        get_ticket_timedelta(df, ["m", "h", "<"], "Time Open")
+        convertTimeOpenCloseToNumerical(df)
+        dataframes.append(df)
+        df.drop(df.tail(1).index,inplace=True) # drop last n=1 rows
+    combined_df = pd.concat(dataframes, ignore_index=True)
+    df = combined_df
+    df['Tips'] = df['Tips'].replace('[\$,]', '', regex=True).astype(float)
+    df['Net Sales'] = df['Net Sales'].replace('[\$,]', '', regex=True).astype(float)
+    if infoBool:
+        print(df.tail())
+        # Get information about the DataFrame
+        print(df.info())
+        # Summary statistics of the DataFrame
+        print(df.describe())
+    return df
+
+def convert_df(df:pd.DataFrame):
+    get_ticket_timedelta(df, ["m", "h", "<"], "Time Open")
+    convertTimeOpenCloseToNumerical(df)
+    df['Tips'] = df['Tips'].replace('[\$,]', '', regex=True).astype(float)
+    df['Net Sales'] = df['Net Sales'].replace('[\$,]', '', regex=True).astype(float)
+    df.drop(df.tail(1).index,inplace=True) # drop last n=1 rows
+
+#plots time of tab opening, vs sales, then time of closing vs sales
+def plotdf1(df: pd.DataFrame):
+    # Plotting Net Sales vs Identifying Number (row index)
+    plt.figure(figsize=(10, 6))  # Set the figure size (width, height)
+    plt.scatter(df['Open'], df['Net Sales'])
+    plt.scatter(df['Close'], df['Net Sales'])
+    plt.xlabel('Tab Open Time')  # X-axis label
+    plt.ylabel('Net Sales')           # Y-axis label
+    plt.title('Tab Open Time vs Net Sales')  # Plot title
+    plt.grid(True)
+    plt.show()
+def plotdf2(df: pd.DataFrame):
+    
+    # Plotting Net Sales vs Identifying Number (row index)
+    plt.figure(figsize=(10, 6))
+    plt.scatter(df['Time Open'], df['Net Sales'])
+    plt.xlabel('Time Open')  # X-axis label
+    plt.ylabel('Net Sales')           # Y-axis label
+    plt.title('Time Open vs Net Sales')  # Plot title
+    plt.grid(True)
+    # Show plot
+    plt.show()
+
+def getGitData(path, myToken)-> pd.DataFrame:
+    # Define the repository details
+    owner = 'tkjavier0'
+    repo = 'PubClub'
+    #path = 'Friday_Data'
+    branch = 'main'
+    #token = 'ghp_O5---d5Ml---j---yjea---zWZq---1kVI2'  # Optional if accessing a private repo
+
+    # GitHub API URL to list contents of a directory
+    url = f'https://api.github.com/repos/{owner}/{repo}/contents/{path}?ref={branch}'
+    headers = {'Authorization': f'token {myToken}'}
+
+    response = requests.get(url, headers=headers)
+    files = response.json()
+
+    # Read each CSV file from the directory
+    csv_dataframes = []
+    for file in files:
+        if file['name'].endswith('.csv'):
+            file_url = file['download_url']
+            content_response = requests.get(file_url)
+            data = pd.read_csv(StringIO(content_response.text))
+            convert_df(data)
+            csv_dataframes.append(data)
+
+    # Combine dataframes if needed
+    combined_data = pd.concat(csv_dataframes, ignore_index=True)
+    return combined_data

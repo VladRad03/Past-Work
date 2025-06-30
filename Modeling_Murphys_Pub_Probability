@@ -1,87 +1,76 @@
 import numpy as np
-def getWeeklyData(weekIndex):
-    i = weekIndex
-    #0 = monday
-    #6 = sunday
-    out = [0]*9
-    #returns array containing [genMean, genStd, 
-    #    tablegoerMean, tablegoerStd, tablegoerCount, 
-    #    bargoerMean, bargoerStd, bargoerCount, samples]
-    
-    a = [18.105675146771038, 17.859287054409005, 18.267272727272726, 18.028985507246375, 17.647006255585342, 17.144820295983088, 15.51875]
-    b = [19.429951690821255, 18.550239234449762, 19.66083916083916, 19.528255528255528, 19.34823977164605, 19.278443113772454, 17.865319865319865]
-    c = [1.7479924294684894, 1.6224728927614265, 1.8941530728939389, 1.7631891290012944, 2.8475843371541965, 3.3512470425438776, 3.153301422185153]
-    d = [2.588608215162603, 2.452153644571739, 1.9771514141286404, 2.4310314568916387, 3.0669582020189003, 3.7437022742064405, 3.4409167513771752]
-    e = [511, 533, 550, 621, 1119, 946, 640]
-    f = [414, 418, 286, 407, 1051, 668, 297]
-    
-    g = [2.2617771542828526, 2.0570129387875222, 2.032437578331225, 2.1797412860771512, 3.075106475814186, 3.6715546162574126, 3.424305899277416]
-    #a = print(tableMeans)
-    #b = print(barMeans)
-    #c = print(tableStds)
-    #d = print(barStds)
-    #e = print(tableTickets)
-    #f = print(barTickets)
-    #g = print(genStds)
-    
-    samples = [11, 11, 10, 12, 12, 10, 10] #numDataSetsPerDayOfWeek
 
-    out[0] = ( a[i] * e[i] + b[i] * f[i] ) / ( e[i] + f[i] )
-    out[1] = g[i]
-    out[2] = a[i]
-    out[3] = c[i]
-    out[4] = e[i]
-    
-    out[5] = b[i]
-    out[6] = d[i]
-    out[7] = f[i] #I apologize for unreadable code
-    
+"""
+Returns an array containing:
+[gen_mean, gen_std, tablegoer_mean, tablegoer_std, tablegoer_count,
+ bargoer_mean, bargoer_std, bargoer_count, samples]
+for a given day of the week (0=Monday, 6=Sunday).
+"""
+def get_weekly_data(week_index):
+    # Data for each day of the week (Monday to Sunday)
+    table_means = [18.11, 17.86, 18.27, 18.03, 17.65, 17.14, 15.52]
+    bar_means = [19.43, 18.55, 19.66, 19.53, 19.35, 19.28, 17.87]
+    table_stds = [1.75, 1.62, 1.89, 1.76, 2.85, 3.35, 3.15]
+    bar_stds = [2.59, 2.45, 1.98, 2.43, 3.07, 3.74, 3.44]
+    table_tickets = [511, 533, 550, 621, 1119, 946, 640]
+    bar_tickets = [414, 418, 286, 407, 1051, 668, 297]
+    gen_stds = [2.26, 2.06, 2.03, 2.18, 3.08, 3.67, 3.42]
+    samples = [11, 11, 10, 12, 12, 10, 10]  # Number of data sets per day
+
+    i = week_index
+    out = [0] * 9
+
+    # General mean (weighted)
+    out[0] = (table_means[i] * table_tickets[i] + bar_means[i] * bar_tickets[i]) / (table_tickets[i] + bar_tickets[i])
+    out[1] = gen_stds[i]
+    out[2] = table_means[i]
+    out[3] = table_stds[i]
+    out[4] = table_tickets[i]
+    out[5] = bar_means[i]
+    out[6] = bar_stds[i]
+    out[7] = bar_tickets[i]
     out[8] = samples[i]
-    print(out)
+
     return out
 
 def normal(power, mean, std, val):
-    a = 1/(np.sqrt(2*np.pi)*std)
-    diff = np.abs(np.power(val-mean, power))
-    b = np.exp(-(diff)/(2*std*std))
-    return a*b
+    a = 1 / (np.sqrt(2 * np.pi) * std)
+    diff = np.abs(np.power(val - mean, power))
+    b = np.exp(-diff / (2 * std ** 2))
+    return a * b
 
-def sundayArrivalRate(currentTimeOfDayInHour):
-    totalTicketSamples = 937
-    totalSamples = 10
-    mean = 16.26 #averageTimeTicketOpened
-    std = 3.42 #standardDeviationOfTimeOpened
-    return (totalTicketSamples / totalSamples) * normal(2, mean, std, currentTimeOfDayInHour)
+#Returns the estimated hourly arrival rate on Sunday at a given time.
+def sunday_arrival_rate(current_hour):
+    total_tickets = 937
+    total_samples = 10
+    mean = 16.26
+    std = 3.42
+    return (total_tickets / total_samples) * normal(2, mean, std, current_hour)
 
-def arrivalRate(currentTimeOfDayInHour, dayOfWeekIndex, classifierType):
-    #classifierType = 0 -> all customers
-    #classifierType = 1 -> tableGoers
-    #classifierType = 2 -> barGoers
-    
-    if (classifierType < 0 or classifierType > 2):
-        raise Exception("classifier type gotta be 0, 1 or 2")
-    
-    data = getWeeklyData(dayOfWeekIndex)
-    # data containing [genMean 0, genStd 1, 
-    #    tablegoerMean 2, tablegoerStd 3, tablegoerCount 4, 
-    #    bargoerMean 5, bargoerStd 6, bargoerCount 7, samples 8]
-    
+# Returns the estimated hourly arrival rate for a specific day and customer type.
+# classifier: 0=all, 1=table goers, 2=bar goers
+def arrival_rate(current_hour, day_of_week, classifier):
+    if classifier not in [0, 1, 2]:
+        raise ValueError("classifier must be 0 (all), 1 (table goers), or 2 (bar goers)")
+
+    data = get_weekly_data(day_of_week)
     samples = data[8]
-    
-    if (classifierType == 0): #general
+
+    if classifier == 0:
         tickets = data[4] + data[7]
         mean = data[0]
         std = data[1]
-    elif (classifierType == 1): #tablers
+    elif classifier == 1:
         tickets = data[4]
         mean = data[2]
         std = data[3]
-    else:  #bar
+    else:
         tickets = data[7]
         mean = data[5]
         std = data[6]
-    return (tickets / samples) * normal(2, mean, std, currentTimeOfDayInHour)
-    
-    
-print(sundayArrivalRate(18)) #average sunday hourly ticket opening rate at 6pm
-print(arrivalRate(18, 6, 0)) #average sunday hourly ticket opening rate at 6pm
+
+    return (tickets / samples) * normal(2, mean, std, current_hour)
+
+# Example usage:
+# print(sunday_arrival_rate(18))           # Average Sunday hourly ticket opening rate at 6pm
+# print(arrival_rate(18, 6, 0))            # Average Sunday hourly ticket opening rate at 6pm (all customers)
